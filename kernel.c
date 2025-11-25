@@ -107,16 +107,48 @@ void clear_screen() {
 }
 
 // Keyboard
+int shift_pressed = 0;
+
 char scancode_to_ascii(unsigned char scancode) {
-    // Simple mapping for common keys
     char map[128] = {
         0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
         '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
         0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0,
         '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' '
     };
-    if (scancode < 128) return map[scancode];
+
+    char shift_map[128] = {
+        0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+        '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
+        0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', 0,
+        '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' '
+    };
+
+    if (scancode < 128) {
+        if (shift_pressed) {
+            return shift_map[scancode];
+        }
+        return map[scancode];
+    }
     return 0;
+}
+
+void reboot() {
+    print_string("Rebooting...\n");
+    // Pulse the CPU reset line via the keyboard controller
+    unsigned char good = 0x02;
+    while (good & 0x02)
+        good = port_byte_in(0x64);
+    port_byte_out(0x64, 0xFE);
+    // If that fails, try a triple fault (not implemented here, usually 0xFE is enough)
+    __asm__("hlt");
+}
+
+void halt() {
+    print_string("System Halted. You can now turn off your computer.\n");
+    while (1) {
+        __asm__("hlt");
+    }
 }
 
 void delay(int count) {
@@ -136,8 +168,17 @@ void terminal_loop() {
         if (port_byte_in(0x64) & 1) { // Data available
             unsigned char scancode = port_byte_in(0x60);
             
+            // Handle Shift Keys
+            if (scancode == 0x2A || scancode == 0x36) { // Left or Right Shift Pressed
+                shift_pressed = 1;
+                continue;
+            } else if (scancode == 0xAA || scancode == 0xB6) { // Left or Right Shift Released
+                shift_pressed = 0;
+                continue;
+            }
+
             if (scancode & 0x80) {
-                // Key release, ignore
+                // Key release, ignore (except shift handled above)
             } else {
                 char c = scancode_to_ascii(scancode);
                 if (c != 0) {
@@ -151,6 +192,17 @@ void terminal_loop() {
                         } else if (strncmp(buffer, "echo ", 5) == 0) {
                             print_string(buffer + 5);
                             print_char('\n');
+                        } else if (strcmp(buffer, "help") == 0) {
+                            print_string("Available commands:\n");
+                            print_string("  help    - Show this list\n");
+                            print_string("  clear   - Clear the screen\n");
+                            print_string("  echo    - Print text\n");
+                            print_string("  reboot  - Restart the system\n");
+                            print_string("  halt    - Stop the system\n");
+                        } else if (strcmp(buffer, "reboot") == 0) {
+                            reboot();
+                        } else if (strcmp(buffer, "halt") == 0) {
+                            halt();
                         } else if (buf_idx > 0) {
                             print_string("Unknown command: ");
                             print_string(buffer);

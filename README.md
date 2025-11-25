@@ -19,6 +19,14 @@ This is a basic operating system project named "Genesis".
 - Make
 - QEMU
 
+### Quick Start
+
+Run the following commands to build, run, and clean the OS image:
+
+```bash
+make clean all run
+```
+
 ### Build
 
 Run the following command to build the OS image:

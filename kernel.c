@@ -25,7 +25,7 @@ void kernel_main() {
         *(video_memory + i) = 0;
     }
 
-    const char* message = "Welcome to Genesis OS v0.0.1 - Kernel Loaded Successfully!";
+    const char* message = "Genesis OS v0.0.1";
     int len = 0;
     while (message[len] != 0) len++;
 
@@ -40,7 +40,7 @@ void kernel_main() {
     }
 
     // Animation "..."
-    int anim_offset = offset + len * 2;
+    int anim_offset = offset + len * 2 + 2; // Extra space (2 chars)
     // Run animation for roughly 3 seconds
     // Adjust delay count based on emulation speed, 10000000 is a rough guess for visible delay
     for (int k = 0; k < 6; k++) { 

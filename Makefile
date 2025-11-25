@@ -44,4 +44,4 @@ boot.bin: boot.asm
 
 # Clean
 clean:
-	del *.bin *.o
+	rm *.bin *.o *.pe
